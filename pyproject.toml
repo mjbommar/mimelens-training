@@ -1,0 +1,62 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "mimelens-training"
+version = "0.1.0"
+description = "Reference training stack for MimeLens: byte vs binary-BPE MLM pretraining for small BERT-style encoders on binary content."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Operating System :: POSIX :: Linux",
+]
+dependencies = [
+    "numpy>=2.0",
+    "pyarrow>=17.0",
+    "pydantic>=2.7",
+    "pyyaml>=6.0",
+    "safetensors>=0.4",
+    "scikit-learn>=1.5",
+    "torch>=2.5",
+    "transformers>=4.45",
+    "wandb>=0.18",
+]
+
+[project.optional-dependencies]
+# Extra optimizers, lazily imported only when selected in a run config.
+optimizers = [
+    "bitsandbytes>=0.44",
+    "lion-pytorch>=0.2",
+]
+
+[tool.maturin]
+module-name = "binary_embedding._native"
+python-source = "python"
+features = ["pyo3/extension-module"]
+strip = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"
+
+[dependency-groups]
+dev = [
+    "ipython>=8.30",
+    "maturin>=1.7",
+    "pytest>=8.3",
+    "ruff>=0.7",
+]

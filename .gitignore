@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Rust / Cargo
+target/
+Cargo.lock.bak
+**/*.rs.bk
+
+# uv / venv
+.venv/
+.python-version.local
+
+# Maturin build artifacts
+*.so
+*.pyd
+*.dylib
+
+# Data / models / artifacts (never commit)
+data/
+runs/
+checkpoints/
+wandb/
+outputs/
+tokenizers/
+*.parquet
+*.arrow
+*.bin
+*.safetensors
+*.pt
+*.pth
+
+# IDE
+.idea/
+.vscode/
+*.swp
