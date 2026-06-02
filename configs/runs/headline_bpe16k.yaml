@@ -1,0 +1,63 @@
+# Headline BPE-16k pretraining run. Differs from headline_byte.yaml ONLY in
+# the variant block, the cache_dir, and (implicitly) total step count, which
+# is derived from target_bytes by the scheduler.
+
+run_id: headline-bpe16k-s1
+seed: 1
+
+variant:
+  pipeline: bpe-16k
+  vocab_size: 16384
+  hf_tokenizer: mjbommar/binary-tokenizer-001-16k
+
+model:
+  num_layers: 8
+  hidden_size: 384
+  num_heads: 6
+  ffn_multiplier_num: 8
+  ffn_multiplier_den: 3
+  activation: geglu
+  norm: rmsnorm
+  rope_theta: 10000.0
+  attention: flash2
+  unpad: true
+  precision: bf16
+  dropout: 0.0
+  tie_word_embeddings: true
+
+data:
+  dataset: mjbommar/binary-30k-tokenized
+  splits_file: configs/splits/binary30k_v1.json
+  cache_dir: data/cache/bpe-16k
+  seq_len: 1024
+  doc_sampling: uniform
+  mask_ratio: 0.30
+  mask_keep_random_split: [0.8, 0.1, 0.1]
+
+optim:
+  optimizer: adamw
+  betas: [0.9, 0.98]
+  eps: 1.0e-6
+  weight_decay: 0.01
+  lr: 5.0e-4
+  warmup_pct: 0.06
+  decay: cosine
+  min_lr_pct: 0.10
+  grad_clip: 1.0
+
+schedule:
+  match_axis: bytes_seen
+  target_bytes: 30_000_000_000
+
+batching:
+  per_gpu_batch: 32
+  grad_accum: 4
+
+eval:
+  every_steps: 5000
+  probe_size: 200
+
+logging:
+  wandb_project: binary-embedding-paper
+  log_every: 50
+  save_every: 5000

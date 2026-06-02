@@ -1,0 +1,103 @@
+# Short-sequence (seq_len=256) variant of headline_template.yaml.
+# Same architecture, optimizer, schedule discipline as the 1024-token cube
+# (matched-steps at 22,888 → set via the launcher script's override list).
+# The ONLY changes vs headline_template.yaml are:
+#
+#   data.seq_len:        1024 → 256  (4× shorter context)
+#   batching.per_gpu_batch: bumped from 16 → 32  (attention memory is ~16× cheaper
+#                                                   at seq_len=256; we keep effective
+#                                                   batch=128 by halving grad_accum)
+#   batching.grad_accum:   8 → 4
+#
+# Effective batch = micro × accum = 32 × 4 = 128 sequences/step (unchanged).
+# Per-step tokens = 128 × 256 = 32,768  (vs 131,072 at seq_len=1024).
+#
+# At matched-steps=22,888 the cube sees 4× fewer tokens than the 1024 cube;
+# this is the "matched compute" comparison (what does the same gradient budget
+# buy you at smaller context?). The matched-tokens-seen alternative would set
+# target_tokens=3_002_609_664 (= 22888 × 128 × 1024) which lands at ~91,552 steps.
+
+run_id: SHORT_SEQ_TEMPLATE
+seed: 1
+
+variant:
+  pipeline: byte
+
+model:
+  hidden_size: 384
+  num_layers: 8
+  num_heads: 6
+  ffn_multiplier_num: 8
+  ffn_multiplier_den: 3
+  rope_theta: 10000.0
+  rms_norm_eps: 1.0e-6
+  cls_pool_dim: 256
+  grad_checkpointing: false
+
+reg:
+  embedding_dropout: 0.0
+  hidden_dropout: 0.0
+  attention_dropout: 0.0
+  drop_path_rate: 0.0
+  init_scheme: scaled_residual
+  init_std: 0.02
+  ema_decay: 0.999
+
+data:
+  cache_root: data/cache
+  seq_len: 256
+  mask_ratio: 0.30
+  doc_sampling: uniform
+  train_split: train
+  eval_split: validation
+
+optim:
+  lr: 5.0e-4
+  weight_decay: 0.01
+  optimizer:
+    type: adamw
+    betas: [0.9, 0.98]
+    eps: 1.0e-6
+    fused: true
+  grad_clip:
+    by_norm: 1.0
+    skip_on_nan: true
+  param_groups:
+    no_decay_pattern: '(\.bias$|norm\d*\.weight$|\.gamma$)'
+    custom_rules: []
+
+schedule:
+  type: cosine
+  warmup_pct: 0.06
+  min_lr_pct: 0.10
+
+schedule_budget:
+  match_axis: steps
+  target_steps: 22888
+
+loss:
+  type: mlm
+  weight: 1.0
+
+runtime:
+  precision: bf16
+  matmul_precision: high
+  compile_mode: none
+  deterministic: false
+  cudnn_benchmark: true
+
+log:
+  out_dir: runs/SHORT_SEQ_TEMPLATE
+  log_every: 50
+  save_every: 2500
+  eval_every: 500
+  eval_files: 32
+  enable_probe: false
+  keep_last_k: 3
+  track_best_metric: eval/mlm_bits_per_byte
+  track_best_mode: min
+
+batching:
+  per_gpu_batch: 32
+  grad_accum: 4
+  num_workers: 2

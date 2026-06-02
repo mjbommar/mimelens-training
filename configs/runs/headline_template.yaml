@@ -1,0 +1,98 @@
+# Template config used by scripts/run_grid.py.
+# `run_id`, `seed`, `variant.pipeline`, and `log.out_dir` are overridden by
+# the launcher per (variant, seed). Everything else is the headline schedule.
+
+run_id: TEMPLATE
+seed: 1
+
+variant:
+  pipeline: byte
+
+model:
+  hidden_size: 384
+  num_layers: 8
+  num_heads: 6
+  ffn_multiplier_num: 8
+  ffn_multiplier_den: 3
+  rope_theta: 10000.0
+  rms_norm_eps: 1.0e-6
+  cls_pool_dim: 256
+  grad_checkpointing: false
+
+reg:
+  embedding_dropout: 0.0
+  hidden_dropout: 0.0
+  attention_dropout: 0.0
+  drop_path_rate: 0.0
+  init_scheme: scaled_residual
+  init_std: 0.02
+  ema_decay: 0.999
+
+data:
+  cache_root: data/cache
+  seq_len: 1024
+  mask_ratio: 0.30
+  doc_sampling: uniform
+  train_split: train
+  eval_split: validation
+
+optim:
+  lr: 5.0e-4
+  weight_decay: 0.01
+  optimizer:
+    type: adamw
+    betas: [0.9, 0.98]
+    eps: 1.0e-6
+    fused: true
+  grad_clip:
+    by_norm: 1.0
+    skip_on_nan: true
+  param_groups:
+    no_decay_pattern: '(\.bias$|norm\d*\.weight$|\.gamma$)'
+    custom_rules: []
+
+schedule:
+  type: cosine
+  warmup_pct: 0.06
+  min_lr_pct: 0.10
+
+schedule_budget:
+  match_axis: bytes_seen
+  target_bytes: 30_000_000_000
+
+loss:
+  type: mlm
+  weight: 1.0
+
+runtime:
+  precision: bf16
+  matmul_precision: high
+  compile_mode: none
+  deterministic: false
+  cudnn_benchmark: true
+
+log:
+  out_dir: runs/TEMPLATE
+  log_every: 50
+  save_every: 5000
+  eval_every: 1000
+  # Eval is chunked into eval_micro_batch=8 forwards inside
+  # eval_loop.eval_mlm_bits_per_byte (so we don't materialise a multi-GB logits
+  # tensor for bpe-16k+). 32 files is plenty for a stable bits/byte estimate.
+  eval_files: 32
+  enable_probe: false
+  keep_last_k: 3
+  track_best_metric: eval/mlm_bits_per_byte
+  track_best_mode: min
+
+batching:
+  # Headline target: effective batch = micro × accum × world = 128 sequences
+  # × 1024 tokens = 131 K tokens / step (~131 K bytes for byte, ~233 K bytes
+  # for bpe-16k). VRAM history on a 16 GB consumer GPU at seq_len=1024 + bf16 +
+  # EMA + fused AdamW:
+  #   micro=8   bpe-16k ~4.7 GB   (under-utilised, ~75 K tokens/s)
+  #   micro=16  bpe-16k ~8-9 GB   (good target, 6+ GB free)
+  #   micro=32  bpe-16k OOM (~13.85 GB, alloc fails)
+  per_gpu_batch: 16
+  grad_accum: 8
+  num_workers: 2

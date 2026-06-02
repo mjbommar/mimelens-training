@@ -3,11 +3,11 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .eggs/
-dist/
-build/
+/dist/
+/build/
 
 # Rust / Cargo
-target/
+/target/
 Cargo.lock.bak
 **/*.rs.bk
 
@@ -20,13 +20,14 @@ Cargo.lock.bak
 *.pyd
 *.dylib
 
-# Data / models / artifacts (never commit)
-data/
-runs/
-checkpoints/
-wandb/
-outputs/
-tokenizers/
+# Data / models / artifacts (never commit) — root-anchored so they do not
+# match source subpackages like python/binary_embedding/data/.
+/data/
+/runs/
+/checkpoints/
+/wandb/
+/outputs/
+/tokenizers/
 *.parquet
 *.arrow
 *.bin
