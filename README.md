@@ -98,6 +98,22 @@ Each run writes checkpoints, a JSONL metrics log, and a `manifest.json`
 (config hash, git SHA, GPU info, env) under its `log.out_dir`. Training
 auto-resumes from `out_dir/checkpoints/state.pt`.
 
+## Using the released models
+
+You don't need this training package to *run* MimeLens — the released cells load
+straight from the Hugging Face Hub via `transformers`:
+
+```bash
+pip install transformers torch
+python examples/classify.py path/to/file
+```
+
+See [`examples/classify.py`](examples/classify.py) for the input contract and
+window-selection guidance (the model reads the first ~1,022 tokens of whatever
+you pass; a short head window classifies magic-byte / compressed types better
+than a long one). The deployed cells (`mjbommar/mimelens-001-medium-{bpe-16k,byte,bpe-64k}-s1`)
+ship a baked 125-class classifier head; the rest expose the mean-pooled encoder.
+
 ## The model family
 
 A single architecture (pre-norm transformer; RoPE θ=10000, RMSNorm, GeGLU 8/3,
